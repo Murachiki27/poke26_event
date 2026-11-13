@@ -1,0 +1,56 @@
+services:
+  proxy:
+    container_name: nginx_proxy
+    build: ./
+    ports:
+      - 80:80
+    depends_on:
+      - api
+      - frontend
+
+  frontend:
+    container_name: web_front
+    image: nginx
+    volumes:
+      - ./frontend/html:/usr/share/nginx/html
+    expose:
+      - 80
+    depends_on:
+      - db
+
+  api:
+    container_name: web_api
+    build:
+      context: ..
+      dockerfile: docker/api/Dockerfile
+    expose:
+      - 80
+    depends_on:
+      - db
+
+  websocket:
+    container_name: web_socket
+    build:
+      context: ..
+      dockerfile: docker/websocket/Dockerfile
+    expose:
+      - 8080
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root2026
+      MYSQL_DATABASE: poke26
+      MYSQL_USER: pikachu
+      MYSQL_PASSWORD: pikachu2026
+    expose:
+      - 3306:3306
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d
+
+volumes:
+  db_data:

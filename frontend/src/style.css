@@ -1,0 +1,24 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #081820; /* GBの最暗色 */
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+#screen {
+  display: block;
+  image-rendering: pixelated; /* 最近傍補間 */
+  image-rendering: crisp-edges;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+canvas {
+  touch-action: none;
+}

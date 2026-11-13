@@ -1,0 +1,7 @@
+{
+  "autoload": {
+    "psr-4": {
+      "Poke26\\Api\\": "src/"
+    }
+  }
+}
