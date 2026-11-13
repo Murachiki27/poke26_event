@@ -20,12 +20,10 @@ final class UserRepository extends Repository
         return 'trx_users';
     }
 
-    public static function fetchFirstById(int $id): array {
-        $q = <<<SQL
-SELECT * FROM trx_users WHERE id = :id
-SQL;
-        $res = MySql::poke26()->fetchAll($q, [':id' => $id]);
-        return $res[0] ?? [];
+    public function fetchFirstById(int $id): ?User
+    {
+        $row = $this->db->readQuery('SELECT * FROM trx_users WHERE id = :id', [':id' => $id]);
+        return isset($row[0]) ? $this->castEntity($row[0]) : null;
     }
 
     // public static function insert(string $name, string $password = ''): void {

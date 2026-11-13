@@ -28,6 +28,16 @@ final class Request
         return $this->getParamString($name) ?? throw new ParameterRequiredException('required '. $name);
     }
 
+    public function getParamInt(string $name): ?int
+    {
+        return isset($this->params[$name]) ? (int)$this->params[$name] : null;
+    }
+
+    public function getParamIntOrThrow(string $name): int
+    {
+        return $this->getParamInt($name) ?? throw new ParameterRequiredException('required '. $name);
+    }
+
     public static function create(): self
     {
         $content_type = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';

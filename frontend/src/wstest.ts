@@ -1,4 +1,4 @@
-const socket = new WebSocket("ws://192.168.11.32:8080");
+const socket = new WebSocket("ws://192.168.11.32/ws/");
 
 socket.onopen = () => {
   console.log("WebSocket connected");
@@ -6,8 +6,11 @@ socket.onopen = () => {
 
 socket.onmessage = (event) => {
   const message = JSON.parse(event.data);
-
   console.log(message);
+};
+
+socket.onclose = () => {
+  console.log("WebSocket closed.");
 };
 
 socket.onerror = (error) => {
@@ -26,28 +29,29 @@ const n = getRandomInt(100);
 const num = n + "";
 pTag.textContent = num;
 
+console.log('UserId:' + n);
+
 canvasEl.appendChild(pTag);
 
 function key(this: Window, ev: KeyboardEvent) {
-    if (ev.key === 'w') {
+    if (ev.key === '1') {
       socket.send(JSON.stringify({
-        type: "join",
+        type: "user_id",
         user_id: n,
-            uuid: num,
-        }));
+      }));
     }
-    if (ev.key === 'q') {
+    if (ev.key === '2') {
         socket.send(JSON.stringify({
-          type: "leave",
+          type: "ready",
           user_id: n,
-            uuid: num,
+          uuid: num,
         }));
     }
   if (ev.key === 'f') {
         socket.send(JSON.stringify({
           type: "debug",
           user_id: n,
-            uuid: num,
+          uuid: num,
         }));
     }
 }

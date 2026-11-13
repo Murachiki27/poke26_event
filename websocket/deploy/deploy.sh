@@ -3,6 +3,9 @@
 DEPLOY_ENV="mura_server_local"
 DEPLOY_ROOT_DIR="~/poke26/websocket"
 
+DEPLOY_DOCKER_DIR="~/poke26/docker"
+DEPLOY_DOCKER_CONTAINER="websocket"
+
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PARENT_DIR=$(dirname "${SCRIPT_DIR}")
 
@@ -11,7 +14,7 @@ cd $PARENT_DIR
 files=()
 for f in *; do
     case "$f" in
-        deploy)
+        deploy|vendor|composer.phar|.gitignore)
             ;;
         *)
             files+=("$f")
@@ -25,6 +28,8 @@ echo "--- mkdir ---"
 ssh ${DEPLOY_ENV} "mkdir -p ${DEPLOY_ROOT_DIR}"
 echo "--- Deploy ---"
 scp -r "${files[@]}" "${DEPLOY_ENV}:${DEPLOY_ROOT_DIR}"
+echo "--- Deploy[Docker build and up] ---"
+ssh ${DEPLOY_ENV} "cd ${DEPLOY_DOCKER_DIR} && docker compose up -d --build ${DEPLOY_DOCKER_CONTAINER}"
 
 # cd $PARENT_DIR
 

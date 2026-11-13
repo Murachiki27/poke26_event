@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Poke26\Api\ORM\Entity;
 
 use DateTimeImmutable;
-use Poke26\Api\Lib\Db\Db;
 
 final class User
 {
