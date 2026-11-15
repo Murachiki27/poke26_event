@@ -1,91 +1,12 @@
-import { drawSpriteUI, drawTextUI, drawWaitIconUI, drawWindowUI } from "../graphics/ui";
+import { drawSpriteUI, drawSpriteUIRepeat, drawTextUI, drawWaitIconUI, drawWindowUI, ICON_UVS } from "../graphics/ui";
 import { pixelToTile, tileToPixel, type Screen } from "../graphics/screen.ts";
 
 import { Howl } from 'howler';
 import { SCREEN_TILE_HEIGHT, SCREEN_TILE_WIDTH } from "./device.ts";
+import { UIBase } from "./uibase.ts";
+import { addInputBox } from "./htmlelement.ts";
 
 export type MessageEndAction = () => void;
-
-abstract class UIBase {
-    protected tx: number;
-    protected ty: number;
-    protected tileWidth: number;
-    protected tileHeight: number;
-    protected visible: boolean;
-    public zIndex: number;
-
-    public get pixelX(): number {
-        return tileToPixel(this.tx);
-    }
-    
-    public get pixelY(): number {
-        return tileToPixel(this.ty);
-    }
-
-    public get pixelWidth(): number {
-        return tileToPixel(this.tileWidth);
-    }
-    
-    public get pixelHeight(): number {
-        return tileToPixel(this.tileHeight);
-    }
-
-    constructor(tx: number, ty: number, tileWidth: number, tileHeight: number) {
-        this.tx = tx;
-        this.ty = ty;
-        this.tileWidth = tileWidth;
-        this.tileHeight = tileHeight;
-        this.zIndex = 0;
-        this.visible = true;
-    }
-
-    update(): void {
-        if (this.visible) {
-            this.updateScreen();
-        }
-    }
-
-    protected updateScreen(): void {
-    }
-
-    render(screen: Screen): void {
-        if (this.visible) {
-            this.renderScreen(screen);
-        }
-    }
-
-    protected renderScreen(screen: Screen): void {
-    }
-
-    pointerDown(x: number, y: number): void {
-        if (this.visible) {
-            this.pointerDownScreen(x, y);
-        }
-    }
-
-    protected pointerDownScreen(x: number, y: number): void {
-    }
-
-    isHover(x: number, y: number): boolean {
-        return x >= this.pixelX && y >= this.pixelY && x < (this.pixelX + this.pixelWidth) && y < (this.pixelY + this.pixelHeight);
-    }
-
-    setVisible(visible: boolean): void {
-        this.visible = visible;
-    }
-
-    isVisible(): boolean {
-        return this.visible;
-    }
-
-    show(): void {
-        this.setVisible(true);
-    }
-
-    hide(): void {
-        this.setVisible(false);
-    }
-}
 
 class MessageSystem {
     private readonly CHAR_MS = 6;
@@ -235,8 +156,8 @@ export class SelectorWindow extends UIBase {
     protected renderScreen(screen: Screen): void {
         for (let i = 0; i < this.items.length; ++i) {
             if (i === this.index) {
-                const u = this.selected ? 22 : 23;
-                drawSpriteUI(screen, this.tx + 1, this.ty + i * 2 + 2, u, 4);
+                const off = this.selected ? ICON_UVS.cursorSelected : ICON_UVS.cursor;
+                drawSpriteUI(screen, this.tx + 1, this.ty + i * 2 + 2, off.u, off.v);
             }
             drawTextUI(screen, this.items[i], this.tx + 2, this.ty + i * 2 + 2);
         }
@@ -267,6 +188,77 @@ export class SelectorWindow extends UIBase {
     }
 }
 
+export class InputWindow extends UIBase {
+    private inputEl: HTMLInputElement;
+
+    private isFocused: boolean = false;
+    private isComposing: boolean = false;
+    private compStart: number = 0;
+    private compLength: number = 0;
+    private ticks: number = 0;
+
+    constructor(scrren: Screen, name: string, tx: number, ty: number, tileWidth: number, tileHeight: number, maxLength: number | null = null) {
+        super(tx, ty, tileWidth, tileHeight);
+        this.inputEl = addInputBox(scrren, name, tx + 1, ty + 1, tileWidth - 2, tileHeight - 2);
+        if (maxLength) {
+            this.inputEl.maxLength = maxLength;
+        }
+        this.inputEl.addEventListener('compositionstart', () => {
+            this.isComposing = true;
+            this.compStart = this.inputEl.selectionStart ?? this.inputEl.value.length;
+            this.compLength = 0;
+        });
+        this.inputEl.addEventListener('compositionupdate', (e: CompositionEvent) => {
+            this.compLength = e.data.length;
+        });
+        this.inputEl.addEventListener('compositionend', () => {
+            this.isComposing = false;
+            this.compStart = 0;
+            this.compLength = 0;
+        });
+        this.inputEl.addEventListener('focus', () => {
+            this.isFocused = true;
+            this.ticks = 0;
+        });
+        this.inputEl.addEventListener('blur', () => {
+            this.isFocused = false;
+        });
+    }
+
+    public getText(): string {
+        return this.inputEl.value;
+    }
+
+    protected updateScreen(): void {
+        if (this.isFocused) {
+            this.ticks++;
+            if (this.ticks >= 60) {
+                this.ticks = 0;
+            }
+        }
+    }
+
+    protected renderScreen(screen: Screen): void {
+        drawWindowUI(screen, this.tx, this.ty, this.tileWidth, this.tileHeight);
+        drawTextUI(screen, ' にゅうりょく ', this.tx + 2, this.ty);
+
+        const text = this.inputEl.value;
+        drawTextUI(screen, text, this.tx + 1, this.ty + 2);
+        if (this.isFocused && this.ticks < 30) {
+            const cursorIndex = this.inputEl.selectionStart ?? text.length;
+            drawSpriteUI(screen, this.tx + 1 + cursorIndex, this.ty + 2, ICON_UVS.charCursor.u, ICON_UVS.charCursor.v);
+        }
+        if (this.isComposing) {
+            drawSpriteUIRepeat(screen, this.tx + 1 + this.compStart, this.ty + 3, this.compLength, 1, ICON_UVS.compLine.u, ICON_UVS.compLine.v);
+        }
+    }
+
+    onClose(): void {
+        this.inputEl.remove();
+    }
+}
+
+
 const msgSystem = new MessageSystem();
 const windowStack: UIBase[] = [];
 let activeWindow: UIBase | null = null;
@@ -279,6 +271,7 @@ export function createWindow(window: UIBase): number {
 export function deleteWindow(id: number): void {
     if (windowStack[id] !== undefined) {
         if (activeWindow === windowStack[id]) {
+            activeWindow.onClose();
             activeWindow = null;
         }
         windowStack.splice(id, 1);
@@ -307,6 +300,12 @@ export function updateMsgBox(): void {
 
 export function renderMsgBox(screen: Screen): void {
     msgSystem.render(screen);
+}
+
+export function updateUI(): void {
+    for (const w of windowStack.toSorted((a, b) => a.zIndex - b.zIndex)) {
+        w.update();
+    }
 }
 
 export function renderUI(screen: Screen): void {

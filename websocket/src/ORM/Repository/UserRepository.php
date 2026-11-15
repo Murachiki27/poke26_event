@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Poke26\App\ORM\Repository;
 
 use Override;
-use Poke26\Api\ORM\Entity\User;
+use Poke26\App\ORM\Entity\User;
 
 final class UserRepository extends Repository
 {
@@ -20,18 +20,9 @@ final class UserRepository extends Repository
         return 'trx_users';
     }
 
-    public static function fetchFirstById(int $id): array {
-        $q = <<<SQL
-SELECT * FROM trx_users WHERE id = :id
-SQL;
-        $res = MySql::poke26()->fetchAll($q, [':id' => $id]);
-        return $res[0] ?? [];
+    public function fetchFirstById(int $id): ?User
+    {
+        $row = $this->db->readQuery('SELECT * FROM trx_users WHERE id = :id', [':id' => $id]);
+        return isset($row[0]) ? $this->castEntity($row[0]) : null;
     }
-
-    // public static function insert(string $name, string $password = ''): void {
-    //     MySql::poke26()->insert("INSERT INTO trx_users SET name = :name, password = :password", [
-    //         ':name' => $name,
-    //         ':password' => $password,
-    //     ]);
-    // }
 }

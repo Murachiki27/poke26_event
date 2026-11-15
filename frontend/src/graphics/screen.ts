@@ -69,7 +69,7 @@ export class Screen {
     }
 
     public rescale(): void {
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = this.devicePixelRatio();
         this.scale = Math.max(1, Math.floor(Math.min((innerWidth * dpr) / this.width, (innerHeight * dpr) / this.height)));
         this.canvas.width = this.width * this.scale; // ※ 変更すると描画状態がリセットされる
         this.canvas.height = this.height * this.scale;
@@ -99,11 +99,19 @@ export class Screen {
         return this.ctx;
     }
 
+    protected devicePixelRatio(): number {
+        return window.devicePixelRatio || 1;
+    }
+
     public coordScreenToLocal(x: number, y: number): [number, number] {
         const rect = this.canvas.getBoundingClientRect();
         const clickX = x - rect.left;
         const clickY = y - rect.top;
         return [Math.floor(clickX * (this.width / rect.width)), Math.floor(clickY * (this.height / rect.height))];
+    }
+
+    public tileToPixelScale(t: number): number {
+        return (tileToPixel(t) * this.scale) / this.devicePixelRatio();
     }
 
     public drawSpriteTile(s: Sprite, x: number, y: number): void {

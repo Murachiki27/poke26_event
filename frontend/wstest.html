@@ -1,15 +1,129 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TEST</title>
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+
+    <title>API / WebSocket Test</title>
   </head>
+
   <body>
-<!--    <div id="app"></div>-->
-    <canvas id="app"></canvas>
-<!--    <script type="module" src="/src/main_.ts"></script>-->
-    <script type="module" src="/src/wstest.ts"></script>
+    <div id="app">
+      <h1>API / WebSocket Test Page</h1>
+
+      <div id="status">
+        未接続
+      </div>
+
+      <!-- User -->
+      <section>
+        <h2>1. User</h2>
+
+        <div class="row">
+          <input
+            id="user-name"
+            type="text"
+            placeholder="ユーザー名"
+          />
+
+          <button id="create-user">
+            User ID発行
+          </button>
+        </div>
+
+        <div class="row">
+          <select id="user-list">
+            <option>読み込み中...</option>
+          </select>
+
+          <button id="refresh-users">
+            一覧更新
+          </button>
+        </div>
+      </section>
+
+      <!-- Room -->
+      <section>
+        <h2>2. Room</h2>
+
+        <div class="row">
+          <input
+            id="room-name"
+            type="text"
+            placeholder="ルーム名"
+          />
+
+          <button id="create-room">
+            Room作成
+          </button>
+        </div>
+
+        <div class="row">
+          <select id="room-list">
+            <option>読み込み中...</option>
+          </select>
+
+          <button id="refresh-rooms">
+            Room一覧更新
+          </button>
+          
+        </div>
+
+        <div class="row">
+          <input
+            id="room-code"
+            type="text"
+            placeholder="ルームコード"
+          />
+          <button id="join-room">
+            Room参加
+          </button>
+        </div>
+
+      </section>
+
+      <!-- WebSocket -->
+      <section>
+        <h2>3. WebSocket</h2>
+
+        <div class="row">
+          <button id="connect-ws">
+            WebSocket接続
+          </button>
+
+          <button id="join-room-ws">
+            JOIN
+          </button>
+
+          <button id="ready">
+            READY
+          </button>
+
+          <button id="leave-room">
+            LEAVE
+          </button>
+
+          <button id="debug-room">
+            DEBUG
+          </button>
+        </div>
+      </section>
+
+      <!-- Log -->
+      <section>
+        <h2>Log</h2>
+
+        <pre id="log"></pre>
+      </section>
+    </div>
+
+    <script
+      type="module"
+      src="/src/wstest.ts"
+    ></script>
   </body>
 </html>

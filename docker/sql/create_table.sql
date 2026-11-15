@@ -12,18 +12,16 @@ CREATE TABLE IF NOT EXISTS trx_users (
 
 ) ENGINE=InnoDB;
 
-
 CREATE TABLE IF NOT EXISTS trx_rooms (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
   code VARCHAR(32) NOT NULL,
   name VARCHAR(50) NOT NULL,
 
-  user_id_1 BIGINT UNSIGNED NOT NULL,
-  user_id_2 BIGINT UNSIGNED NOT NULL,
+  user_id_1 BIGINT UNSIGNED,
+  user_id_2 BIGINT UNSIGNED,
 
   status ENUM('matching','battle', 'end'),
-  state SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-  turn SMALLINT UNSIGNED NOT NULL DEFAULT 0,
 
   created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -31,17 +29,22 @@ CREATE TABLE IF NOT EXISTS trx_rooms (
 
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS trx_room_pokes (
+CREATE TABLE IF NOT EXISTS trx_room_users (
   room_id BIGINT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
 
+  PRIMARY KEY (room_id, user_id)
+
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS trx_user_pokes (
+  user_id BIGINT UNSIGNED NOT NULL,
   poke_id SMALLINT UNSIGNED NOT NULL,
 
   max_hp INT UNSIGNED NOT NULL,
   current_hp INT UNSIGNED NOT NULL,
 
   status ENUM('non','slp','psn','par','brn','frz') NOT NULL DEFAULT 'non',
-  sleep_turns TINYINT UNSIGNED NOT NULL DEFAULT 0,
 
   rank_attack TINYINT NOT NULL DEFAULT 0,
   rank_defense TINYINT NOT NULL DEFAULT 0,
@@ -50,6 +53,9 @@ CREATE TABLE IF NOT EXISTS trx_room_pokes (
 
   is_active ENUM('no', 'yes') NOT NULL DEFAULT 'no',
 
-  PRIMARY KEY (room_id, user_id, poke_id)
+  PRIMARY KEY (user_id, poke_id)
 
 ) ENGINE=InnoDB;
+
+
+

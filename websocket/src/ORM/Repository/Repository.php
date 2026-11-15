@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Poke26\App\ORM\Repository;
 
-use Poke26\Api\Lib\Db\Db;
+use Poke26\App\Lib\Db\Db;
 
 abstract class Repository
 {

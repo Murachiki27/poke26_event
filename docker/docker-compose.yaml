@@ -7,12 +7,16 @@ services:
     depends_on:
       - api
       - frontend
+      - websocket
 
   frontend:
     container_name: web_front
-    image: nginx
-    volumes:
-      - ./frontend/html:/usr/share/nginx/html
+    # image: nginx
+    build:
+      context: ..
+      dockerfile: docker/frontend/Dockerfile
+    # volumes:
+    #   - ./frontend:/usr/share/nginx/html
     expose:
       - 80
     depends_on:
@@ -36,7 +40,8 @@ services:
     expose:
       - 8080
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:8.0
@@ -51,6 +56,11 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   db_data:

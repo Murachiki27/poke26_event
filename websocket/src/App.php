@@ -7,6 +7,8 @@ use Poke26\App\Handler\ConnectHandler;
 use Poke26\App\Handler\MessageHandler;
 use Poke26\App\Lib\Db\Db;
 use Poke26\App\Lib\MemoryCache;
+use Poke26\App\ORM\MemoryCache\ConnectionMemoryCache;
+use Poke26\App\ORM\MemoryCache\RoomMemoryCache;
 use Poke26\App\ORM\MemoryCache\UserStateMemoryCache;
 use Throwable;
 use Workerman\Worker;
@@ -18,7 +20,7 @@ class App
     private MemoryCache $cache;
     private Db $db;
 
-    public function __construct()
+    public function __construct(Db $db)
     {
         $ws = new Worker(WEBSOCKET_NAME);
         $ws->count = 1;
@@ -29,7 +31,7 @@ class App
         $this->ws = $ws;
 
         $this->cache = new MemoryCache();
-        $this->db = new Db(DB_DSN_POKE26, DB_USERNAME, DB_PASSWORD);
+        $this->db = $db;
     }
 
     public function run(): void
@@ -45,15 +47,18 @@ class App
     private function onConnect(TcpConnection $connection): void
     {
         echo "Client connected at {$connection->id}\n";
-        $usm = new UserStateMemoryCache($this->cache);
-        ConnectHandler::begin($connection, $usm);
+        // $usm = new UserStateMemoryCache($this->cache);
+        $csm = new ConnectionMemoryCache($this->cache);
+        ConnectHandler::begin($connection, $csm);
     }
 
     private function onClose(TcpConnection $connection): void
     {
         echo "Client disconnected at {$connection->id}\n";
-        $usm = new UserStateMemoryCache($this->cache);
-        ConnectHandler::end($connection, $usm);
+        // $usm = new UserStateMemoryCache($this->cache);
+        $csm = new ConnectionMemoryCache($this->cache);
+        $rsm = new RoomMemoryCache($this->cache);
+        ConnectHandler::end($connection, $this->db, $csm, $rsm);
     }
 
     private function onMessage(TcpConnection $connection, mixed $data): void
@@ -61,30 +66,25 @@ class App
         /** @var array */
         $message = json_decode($data, true);
 
-        $usm = new UserStateMemoryCache($this->cache);
-        $user_state = $usm->fetch($connection->id);
+        // $usm = new UserStateMemoryCache($this->cache);
+        $csm = new ConnectionMemoryCache($this->cache);
+        $rsm = new RoomMemoryCache($this->cache);
+        $conn_state = $csm->fetch($connection->id);
         $user_id = $message['user_id'] ?? null;
 
         if ($user_id === null) {
+            echo $connection->id . ': user_id does not found.';
             return;
         }
         // user_id が登録されているものと違うなら接続断
-        if ($user_state->getUserId() !== null && $user_id !== $user_state->getUserId()) {
+        if ($conn_state !== null && $user_id !== $conn_state->user_id) {
             $connection->close();
+            echo $connection->id . ': user_id changed. connection close. old:' . $conn_state->user_id . ', new:' . $user_id;
             return;
         }
 
         try {
-            if ($user_state !== null) {
-                match ($message['type']) {
-                    'user_id' => MessageHandler::user_id($connection, $user_state, $user_id),
-
-                    'join' => MessageHandler::user_id($connection, $user_state, $user_id),
-                    'ready' => MessageHandler::ready($connection, $this->db, $usm, $user_state),
-
-                    'debug' => MessageHandler::debug($connection, $usm),
-                };
-            }
+            MessageHandler::on($connection, $this->db, $csm, $rsm, $user_id, $message);
         } catch (Throwable $t) {
             echo $t->getMessage() . ', Cause:' .$t->getTraceAsString();
         }

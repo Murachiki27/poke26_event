@@ -28,7 +28,7 @@ final class RoomController extends BaseController
             $names[] = [
                 "id"=> $room->id,
                 "name"=> $room->name,
-                'count' => $room->user_id_2 !== 0 ? 2 : ($room->user_id_1 !== 0 ? 1 : 0),
+                'count' => $room->user_id_2 !== null ? 2 : ($room->user_id_1 !== null ? 1 : 0),
             ];
         }
         return Response::json($names);
@@ -37,14 +37,14 @@ final class RoomController extends BaseController
     #[Override]
     public function post(Request $request, Db $db): Response
     {
-        $user_id = $request->getParamStringOrThrow('user_id');
+        $user_id = $request->getParamIntOrThrow('user_id');
         $code = $request->getParamStringOrThrow('code');
 
         $room_repo = new RoomRepository($db);
         $user_repo = new UserRepository($db);
 
         $room_id = $room_repo->fetchFirstByCodeAndJoinable($code);
-        $user = $user_repo->fetchFirstById(id: (int)$user_id);
+        $user = $user_repo->fetchFirstById(id: $user_id);
 
         if ($room_id === null || !$user) {
             throw new HttpNotFoundException();
@@ -57,14 +57,14 @@ final class RoomController extends BaseController
     #[Override]
     public function put(Request $request, Db $db): Response
     {
-        $user_id = $request->getParamStringOrThrow('user_id');
+        $user_id = $request->getParamIntOrThrow('user_id');
         $name = $request->getParamStringOrThrow('name');
         $code = GenCoder::generateCode();
 
         $user_repo = new UserRepository($db);
         $room_repo = new RoomRepository($db);
 
-        $user = $user_repo->fetchFirstById(id: (int)$user_id);
+        $user = $user_repo->fetchFirstById(id: $user_id);
         if (!$user) {
             throw new HttpNotFoundException();
         }
@@ -73,7 +73,6 @@ final class RoomController extends BaseController
             'name'=> $name,
             'code'=> $code,
             'user_id_1'=> $user->id,
-            'user_id_2'=> 0,
             'status'=> 'matching',
         ]);
         return Response::json(['code' => $code]);

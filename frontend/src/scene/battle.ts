@@ -14,7 +14,7 @@ scene
             //     },
             //     body: JSON.stringify({ ans: trimmedInput }), // オブジェクトをJSON文字列に変換
             // });
-            fetch(`${import.meta.env.BASE_URL}api/room.php`)
+            fetch(`/api/room`)
                 .then(res => {
                     return res.json();
                 }).then(data => {

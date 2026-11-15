@@ -10,11 +10,11 @@ import {Screen, tileToPixel} from './graphics/screen.ts';
 // import {createSpriteSheet} from "./io/asset.ts";
 // import {drawText, drawWindow} from "./graphics/ui.ts";
 import {clickScene, renderScene, setScene, updateScene} from "./scene/scene.ts";
-import { onMsgBoxStepAction, renderMsgBox, renderUI, updateMsgBox } from './sys/msgbox.ts';
+import { onMsgBoxStepAction, renderMsgBox, renderUI, updateMsgBox, updateUI } from './sys/msgbox.ts';
 import { calcEffect } from './graphics/effector.ts';
 // import { scene as openingScene } from './scene/opening.ts';
 import { SCREEN_PIXEL_HEIGHT, SCREEN_PIXEL_WIDTH } from './sys/device.ts';
-import { scene as sceneDebug } from './scene/debug.ts';
+import { makeScene as makeDebugScene } from './scene/debug.ts';
 
 // ---- 画面設定 (DMG: 160x144 / 4階調) -------------------------------
 
@@ -96,6 +96,8 @@ pushMsg();
 
 await loadSheets();
 
+const sceneDebug = makeDebugScene(screen);
+
 setScene(sceneDebug);
 // let started = false;
 
@@ -104,6 +106,7 @@ function ticks(now: number): void {
     tickCount++;
 
     updateMsgBox();
+    updateUI();
 
     if (tickCount % 2 === 0) {
         // okido.update();

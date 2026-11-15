@@ -6,7 +6,7 @@ import type { DefferedConst } from "../util/ref.ts";
 
 const binSheetOp = getSpriteSheet('OP');
 
-abstract class Event {
+export abstract class Event {
     private initialized = false;
     public isInitialized(): boolean {
         if (this.initialized) {
@@ -18,7 +18,7 @@ abstract class Event {
 
     public render(screen: Screen): void {}
 
-    public onStart(scene: Scene, now: number): void {}
+    public onStart(screen: Screen, scene: Scene, now: number): void {}
     public onUpdate(screen: Screen, now: number): void {}
     public abstract continueUpdate(screen: Screen): boolean;
     public onEnd(): void {}
@@ -36,7 +36,7 @@ class MessageEvent extends Event {
         this.afterShowing = afterShowing;
     }
 
-    onStart(scene: Scene, now: number) {
+    onStart(screen: Screen, scene: Scene, now: number) {
         resetMsgBoxState();
         setMsgBoxLines(...this.lines);
         setMsgBoxVisible(true);
@@ -72,7 +72,7 @@ class TimeEvent extends Event {
         this.endAction = endAction;
     }
 
-    public onStart(scene: Scene, now: number) {
+    public onStart(screen: Screen, scene: Scene, now: number) {
         this.ticks = 0;
         this.startAction?.();
     }
@@ -106,7 +106,7 @@ class SelectorEvent extends Event {
         this.selectAction = selectAction;
     }
 
-    public onStart(scene: Scene, now: number): void {
+    public onStart(screen: Screen, scene: Scene, now: number): void {
         this.id = createWindow(this.window);
         setActiveWindow(this.id);
     }
@@ -162,6 +162,11 @@ export class Scene {
         return this;
     }
 
+    public add(event: Event): this {
+        this.events.push(event);
+        return this;
+    }
+
     public addCustomJob(checkDone: () => boolean, renderAction: ((screen: Screen) => void) | null, updateAction: (() => void) | null = null): this {
         return this.addJob(new (class extends Job {
             public update(): void {
@@ -189,7 +194,7 @@ export class Scene {
         while (this.index < this.events.length) {
             const evt = this.events[this.index];
             if (!evt.isInitialized()) {
-                evt.onStart(this, now);
+                evt.onStart(screen, this, now);
             }
             if (!evt.continueUpdate(screen)) {
                 evt.onEnd();

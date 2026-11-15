@@ -9,6 +9,9 @@ SRC_DIR_NAME="dist"
 DEPLOY_ENV="mura_server_local"
 DEPLOY_ROOT_DIR="~/poke26/frontend"
 
+DEPLOY_DOCKER_DIR="~/poke26/docker"
+DEPLOY_DOCKER_CONTAINER="frontend"
+
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PARENT_DIR=$(dirname "${SCRIPT_DIR}")
 # DEPLOY_HTML_DIR="${DEPLOY_ROOT_DIR}/html"
@@ -44,5 +47,9 @@ scp -r ${src_dir} "${DEPLOY_ENV}:${dest_dir}"
 # scp -r ${src_ws_dir} "${DEPLOY_ENV}:${dest_ws_dir}"
 # echo "permission change"
 # ssh ${DEPLOY_ENV} "chmod 755 ${dest_ws_dir}"
+
+
+echo "--- Deploy[Docker build and up] ---"
+ssh ${DEPLOY_ENV} "cd ${DEPLOY_DOCKER_DIR} && docker compose up -d --build ${DEPLOY_DOCKER_CONTAINER}"
 
 echo "Done"
