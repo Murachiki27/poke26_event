@@ -1,26 +1,30 @@
 import  {type Screen} from "../graphics/screen.ts";
 import { getSpriteSheet } from "../data/sheet";
 import { effectContrast, effectLight } from "../graphics/effector";
-import { setMsgBoxVisible } from "../sys/msgbox";
-import { Job, Scene } from "./scene";
+import { setMsgBoxVisible, setMsgOption } from "../sys/msgbox";
+import { createJob, createScene, input, job, Job, message, messageFunc, Scene, timer } from "./scene";
 import type { DefferedConst } from "../util/ref.ts";
+import { SCREEN_TILE_HEIGHT, SCREEN_TILE_WIDTH } from "../sys/device.ts";
 
 
 const sheetOp = getSpriteSheet('OP');
 
+
+const WAIT_TICKS = 30;
 let sheetOpVisible: boolean = false;
 let sheetX = 6;
 let sheetU = 0, sheetV = 0;
 
+setMsgOption({ tx: 0, ty: 18, tileWidth: SCREEN_TILE_WIDTH, tileHeight: 6 });
 
-let scene: Scene = new Scene();
+let userName = '';
 
-scene
-    .addCustomJob(
+export const scene = createScene([
+    createJob(() => job(
         () => sheetOpVisible,
         (screen) => screen.blitCell(sheetOp.value, sheetX, 4, 7, 7, sheetU, sheetV)
-    )
-    .addTime(30, (ticks) => {
+    )),
+    timer(30, (ticks) => {
         const step = ticks / 5;
         if (ticks % 5 === 0) {
             switch (step) {
@@ -35,10 +39,10 @@ scene
     }, () => {
         effectLight(3);
         effectContrast(3);
-    })
-    .addMessage(["はじめまして！", "ポケット　モンスターの　せかいへ", "ようこそ！"])
-    .addMessage(["わたしの　なまえは　オーキド", "みんなからは　ポケモン　はかせと", "したわれて　おるよ"], true)
-    .addTime(15, (ticks) => {
+    }),
+    message(["はじめまして！", "ポケット　モンスターの　せかいへ", "ようこそ！"]),
+    message(["わたしの　なまえは　オーキド", "みんなからは　ポケモン　はかせと", "したわれて　おるよ"], true),
+    timer(15, (ticks) => {
         const step = ticks / 5;
         if (ticks % 5 === 0) {
             switch (step) {
@@ -53,18 +57,18 @@ scene
         sheetX = 20;
         sheetU = 7;
         sheetV = 7;
-    })
-    .addTime(20, (ticks) => {
-        if (ticks > 13) {
+    }),
+    timer(WAIT_TICKS, (ticks) => {
+        if (ticks > WAIT_TICKS - 7) {
             sheetX -= 2;
         }
-    })
-    .addMessage(["この　せかいには", "ポケット　モンスターと　よばれる"])
-    .addMessage(["いきもの　たちが", "いたるところに　すんでいる！"])
-    .addMessage(["その　ポケモン　という　いきものを", "ひとは　ペットに　したり", "しょうぶに　つかったり・・・"])
-    .addMessage(["そして・・・"])
-    .addMessage(["わたしは　この　ポケモンの", "けんきゅうを　してる　というわけだ"], true)
-    .addTime(15, (ticks) => {
+    }),
+    message(["この　せかいには", "ポケット　モンスターと　よばれる"]),
+    message(["いきもの　たちが", "いたるところに　すんでいる！"]),
+    message(["その　ポケモン　という　いきものを", "ひとは　ペットに　したり", "しょうぶに　つかったり・・・"]),
+    message(["そして・・・"]),
+    message(["わたしは　この　ポケモンの", "けんきゅうを　してる　というわけだ"], true),
+    timer(15, (ticks) => {
         const step = ticks / 5;
         if (ticks % 5 === 0) {
             switch (step) {
@@ -79,15 +83,21 @@ scene
         sheetX = 20;
         sheetU = 0;
         sheetV = 7;
-    })
-    .addTime(20, (ticks) => {
-        if (ticks > 13) {
+    }),
+    timer(WAIT_TICKS, (ticks) => {
+        if (ticks > WAIT_TICKS - 7) {
             sheetX -= 2;
         }
-    })
-    .addMessage(["では　はじめに　きみの　なまえを", "おしえて　もらおう！"])
-    .addMessage(["ふむ・・・", "レッド　と　いうんだな！"], true)
-    .addTime(15, (ticks) => {
+    }),
+    message(["では　はじめに　きみの　なまえを", "おしえて　もらおう！"]),
+    input({
+        input: { name: ' なまえ ', tx: 1, ty: 12, tileWidth: 18, tileHeight: 5, maxLength: 8 },
+        button: { label: { value: 'けってい', tx: 8, ty: 19 }, tx: 7, ty: 18, tileWidth: 6, tileHeight: 3 },
+    }, (value) => {
+        userName = value;
+    }),
+    messageFunc((screen) => ["ふむ・・・", `${userName}　と　いうんだな！`], true),
+    timer(15, (ticks) => {
         const step = ticks / 5;
         if (ticks % 5 === 0) {
             switch (step) {
@@ -101,8 +111,8 @@ scene
         effectLight(0);
         sheetU = 0;
         sheetV = 14;
-    })
-    .addTime(30, (ticks) => {
+    }),
+    timer(30, (ticks) => {
         const step = ticks / 5;
         if (ticks % 5 === 0) {
             switch (step) {
@@ -117,11 +127,11 @@ scene
     }, () => {
         effectLight(3);
         effectContrast(3);
-    })
-    .addMessage(["こいつは　わたしの　まご", "きみの　おさななじみであり", "ライバル　である"])
-    .addMessage(["・・・えーと？", "なまえは　なんて　いったかな？"])
-    .addMessage(["そうだ　そうだ！　おもいだしたぞ", "グリーン　という　なまえだ"])
-    .addTime(15, (ticks) => {
+    }),
+    message(["こいつは　わたしの　まご", "きみの　おさななじみであり", "ライバル　である"]),
+    message(["・・・えーと？", "なまえは　なんて　いったかな？"]),
+    message(["そうだ　そうだ！　おもいだしたぞ", "グリーン　という　なまえだ"]),
+    timer(15, (ticks) => {
         const step = ticks / 5;
         if (ticks % 5 === 0) {
             switch (step) {
@@ -134,8 +144,8 @@ scene
         setMsgBoxVisible(false);
         sheetU = 0;
         sheetV = 7;
-    })
-    .addTime(15, (ticks) => {
+    }),
+    timer(15, (ticks) => {
         const step = ticks / 5;
         if (ticks % 5 === 0) {
             switch (step) {
@@ -144,12 +154,9 @@ scene
                 case 3: effectLight(0); break;
             }
         }
-    })
-    .addMessage(["レッド！"])
-    .addMessage(["いよいよ　これから", "きみの　ものがたりの　はじまりだ！"])
-    .addMessage(["ゆめと　ぼうけんと！", "ポケット　モンスターの　せかいへ！", "レッツゴー！"])
-    ;
-
-
-export { scene };
+    }),
+    message(["レッド！"]),
+    message(["いよいよ　これから", "きみの　ものがたりの　はじまりだ！"]),
+    message(["ゆめと　ぼうけんと！", "ポケット　モンスターの　せかいへ！", "レッツゴー！"]),
+]);
 

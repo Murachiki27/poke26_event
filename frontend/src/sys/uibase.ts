@@ -1,6 +1,13 @@
 import { Screen, tileToPixel } from "../graphics/screen";
-import { drawSpriteUI, drawSpriteUIRepeat, drawTextUI, drawWindowUI } from "../graphics/ui";
-import { addButtonElement } from "./htmlelement";
+import { drawSpriteUI, drawSpriteUIRepeat, drawTextUI, drawWindowUI, ICON_UVS } from "../graphics/ui";
+import { addButtonElement, addInputBox } from "./htmlelement";
+
+export type UIBaseOption = {
+    tx: number,
+    ty: number,
+    tileWidth: number,
+    tileHeight: number,
+};
 
 export abstract class UIBase {
     protected tx: number;
@@ -26,11 +33,11 @@ export abstract class UIBase {
         return tileToPixel(this.tileHeight);
     }
 
-    constructor(tx: number, ty: number, tileWidth: number, tileHeight: number) {
-        this.tx = tx;
-        this.ty = ty;
-        this.tileWidth = tileWidth;
-        this.tileHeight = tileHeight;
+    constructor(option: UIBaseOption) {
+        this.tx = option.tx;
+        this.ty = option.ty;
+        this.tileWidth = option.tileWidth;
+        this.tileHeight = option.tileHeight;
         this.zIndex = 0;
         this.visible = true;
     }
@@ -86,12 +93,20 @@ export abstract class UIBase {
     }
 }
 
+export type UIButtonOption = UIBaseOption & {
+    label: { value: string, tx: number, ty: number },
+};
+
 export class UIButton extends UIBase {
     private buttonEl: HTMLButtonElement;
+    private labelX: number;
+    private labelY: number;
 
-    constructor(scrren: Screen, label: string, tx: number, ty: number, tileWidth: number, tileHeight: number) {
-        super(tx, ty, tileWidth, tileHeight);
-        this.buttonEl = addButtonElement(scrren, label, tx, ty, tileWidth, tileHeight);
+    constructor(scrren: Screen, option: UIButtonOption) {
+        super(option);
+        this.buttonEl = addButtonElement(scrren, option.label.value, option.tx, option.ty, option.tileWidth, option.tileHeight);
+        this.labelX = option.label.tx;
+        this.labelY = option.label.ty;
     }
 
     addClickEvent(handler: (this: HTMLButtonElement, ev: PointerEvent) => any): void {
@@ -99,9 +114,9 @@ export class UIButton extends UIBase {
     }
 
     protected renderScreen(screen: Screen): void {
-        // drawWindowUI(screen, this.tx, this.ty, this.tileWidth, this.tileHeight);
-        drawSpriteUIRepeat(screen, this.tx, this.ty, this.tileWidth, this.tileHeight, 2, 18);
-        // drawTextUI(screen, text, this.tx + 1, this.ty + 2);
+        drawWindowUI(screen, this.tx, this.ty, this.tileWidth, this.tileHeight);
+        // drawSpriteUIRepeat(screen, this.tx, this.ty, this.tileWidth, this.tileHeight, 2, 18);
+        drawTextUI(screen, this.buttonEl.textContent, this.labelX, this.labelY);
     }
 
     onClose(): void {
@@ -109,5 +124,128 @@ export class UIButton extends UIBase {
     }
 }
 
+export type UIInputOption = UIBaseOption & {
+    name: string,
+    maxLength?: number,
+};
 
+export class UIInput extends UIBase {
+    private inputEl: HTMLInputElement;
+    private title: string;
+    private isFocused: boolean = false;
+    private isComposing: boolean = false;
+    private compStart: number = 0;
+    private compLength: number = 0;
+    private ticks: number = 0;
+
+    constructor(scrren: Screen, option: UIInputOption) {
+        super(option);
+        this.inputEl = addInputBox(scrren, option.name, option.tx + 1, option.ty + 1, option.tileWidth - 2, option.tileHeight - 2);
+        this.title = option.name;
+        if (option.maxLength) {
+            this.inputEl.maxLength = option.maxLength;
+        }
+        this.inputEl.addEventListener('compositionstart', () => {
+            this.isComposing = true;
+            this.compStart = this.inputEl.selectionStart ?? this.inputEl.value.length;
+            this.compLength = 0;
+        });
+        this.inputEl.addEventListener('compositionupdate', (e: CompositionEvent) => {
+            this.compLength = e.data.length;
+        });
+        this.inputEl.addEventListener('compositionend', () => {
+            this.isComposing = false;
+            this.compStart = 0;
+            this.compLength = 0;
+        });
+        this.inputEl.addEventListener('focus', () => {
+            this.isFocused = true;
+            this.ticks = 0;
+        });
+        this.inputEl.addEventListener('blur', () => {
+            this.isFocused = false;
+        });
+    }
+
+    public getText(): string {
+        return this.inputEl.value;
+    }
+
+    protected updateScreen(): void {
+        if (this.isFocused) {
+            this.ticks++;
+            if (this.ticks >= 60) {
+                this.ticks = 0;
+            }
+        }
+    }
+
+    protected renderScreen(screen: Screen): void {
+        drawWindowUI(screen, this.tx, this.ty, this.tileWidth, this.tileHeight);
+        drawTextUI(screen, this.title, this.tx + 2, this.ty);
+
+        const text = this.inputEl.value;
+        drawTextUI(screen, text, this.tx + 1, this.ty + 2);
+        if (this.isFocused && this.ticks < 30) {
+            const cursorIndex = this.inputEl.selectionStart ?? text.length;
+            drawSpriteUI(screen, this.tx + 1 + cursorIndex, this.ty + 2, ICON_UVS.charCursor.u, ICON_UVS.charCursor.v);
+        }
+        if (this.isComposing) {
+            drawSpriteUIRepeat(screen, this.tx + 1 + this.compStart, this.ty + 3, this.compLength, 1, ICON_UVS.compLine.u, ICON_UVS.compLine.v);
+        }
+    }
+
+    onClose(): void {
+        this.inputEl.remove();
+    }
+}
+
+export type UISelectorOption = UIBaseOption & {
+    items: string[],
+};
+
+export class UISelector extends UIBase {
+    private items: string[];
+    private index: number = -1;
+    private selected: boolean = false;
+
+    constructor(option: UISelectorOption) {
+        super(option);
+        this.items = option.items;
+    }
+
+    protected renderScreen(screen: Screen): void {
+        for (let i = 0; i < this.items.length; ++i) {
+            if (i === this.index) {
+                const off = this.selected ? ICON_UVS.cursorSelected : ICON_UVS.cursor;
+                drawSpriteUI(screen, this.tx + 1, this.ty + i * 2 + 2, off.u, off.v);
+            }
+            drawTextUI(screen, this.items[i], this.tx + 2, this.ty + i * 2 + 2);
+        }
+        drawWindowUI(screen, this.tx, this.ty, this.tileWidth, this.tileHeight);
+    }
+
+    protected pointerDownScreen(x: number, y: number): void {
+        if (this.isHover(x, y)) {
+            const y1 = y - this.pixelY - 12;
+            const h = tileToPixel(this.items.length) * 2;
+            if (y1 >= 0 && y1 < h) {
+                const i = Math.trunc(y1 / 16);
+                if (i !== this.index) {
+                    this.index = i;
+                } else {
+                    this.selected = true;
+                }
+            }
+        }
+    }
+
+    isSelected(): boolean {
+        return this.selected;
+    }
+
+    getSelectIndex(): number {
+        return this.index;
+    }
+}
 

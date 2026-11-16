@@ -1,8 +1,10 @@
 import  {type Screen} from "../graphics/screen.ts";
-import { createWindow, deleteWindow, isMsgBoxEnded, resetMsgBoxState, SelectorWindow, setActiveWindow, setMsgBoxLines, setMsgBoxVisible } from "../sys/msgbox.ts";
+import { createWindow, deleteWindow, isMsgBoxEnded, resetMsgBoxState, setActiveWindow, setMsgBoxLines, setMsgBoxVisible } from "../sys/msgbox.ts";
 
 import { getSpriteSheet } from '../data/sheet.ts';
 import type { DefferedConst } from "../util/ref.ts";
+import { UIButton, UIInput, UISelector, type UIButtonOption, type UIInputOption, type UISelectorOption } from "../sys/uibase.ts";
+import { AUDIO } from "../audio/audio.ts";
 
 const binSheetOp = getSpriteSheet('OP');
 
@@ -26,19 +28,44 @@ export abstract class Event {
     public onClick(screen: Screen): void {}
 }
 
+export function wait(waitFunc: (screen: Screen) => boolean): WaitEvent {
+    return new WaitEvent(waitFunc);
+};
+
+class WaitEvent extends Event {
+    private waitFunc: (screen: Screen) => boolean;
+    
+    constructor(waitFunc: (screen: Screen) => boolean) {
+        super();
+        this.waitFunc = waitFunc;
+    }
+
+    public continueUpdate(screen: Screen): boolean {
+        return this.waitFunc(screen);
+    }
+}
+
+export function messageFunc(linesFunc: (screen: Screen) => string[], afterShowing: boolean = false): MessageEvent {
+    return new MessageEvent(linesFunc, afterShowing);
+}
+
+export function message(lines: string[], afterShowing: boolean = false): MessageEvent {
+    return new MessageEvent(() => lines, afterShowing);
+}
+
 class MessageEvent extends Event {
-    private readonly lines: string[];
+    private readonly linesFunc: (screen: Screen) => string[];
     private readonly afterShowing: boolean;
 
-    constructor(lines: string[], afterShowing: boolean) {
+    constructor(linesFunc: (screen: Screen) => string[], afterShowing: boolean) {
         super();
-        this.lines = lines;
+        this.linesFunc = linesFunc;
         this.afterShowing = afterShowing;
     }
 
     onStart(screen: Screen, scene: Scene, now: number) {
         resetMsgBoxState();
-        setMsgBoxLines(...this.lines);
+        setMsgBoxLines(...this.linesFunc(screen));
         setMsgBoxVisible(true);
     }
 
@@ -53,10 +80,13 @@ class MessageEvent extends Event {
     }
 }
 
+export function timer(tickLength: number, updatepAction: UpdateAction | null = null, startAction: StartAction | null = null, endAction: EndAction | null = null): TimeEvent {
+    return new TimeEvent(tickLength, updatepAction, startAction, endAction);
+}
+
 export type UpdateAction = (ticks: number) => void;
 export type StartAction = () => void;
 export type EndAction = () => void;
-
 class TimeEvent extends Event {
     private readonly tickLength: number;
     private readonly updatepAction: UpdateAction | null;
@@ -64,7 +94,7 @@ class TimeEvent extends Event {
     private readonly endAction: EndAction | null;
     private ticks: number = 0;
 
-    constructor(tickLength: number, updatepAction: UpdateAction | null = null, startAction: StartAction | null = null, endAction: EndAction | null = null) {
+    constructor(tickLength: number, updatepAction: UpdateAction | null, startAction: StartAction | null, endAction: EndAction | null) {
         super();
         this.tickLength = tickLength;
         this.updatepAction = updatepAction;
@@ -93,32 +123,124 @@ class TimeEvent extends Event {
     }
 }
 
-export type SelectAction = (index: number) => void;
+type UIEventOption = {
+    showAfter?: boolean;
+};
 
+export type UISelectorEventOption = UISelectorOption & UIEventOption;
+
+export function selectorFunc(optionFunc: (screen: Screen) => UISelectorEventOption, selectAction: SelectAction): SelectorEvent {
+    return new SelectorEvent(optionFunc, selectAction);
+}
+
+export function selector(option: UISelectorEventOption, selectAction: SelectAction): SelectorEvent {
+    return new SelectorEvent(() => option, selectAction);
+}
+
+export type SelectAction = (index: number, elId: number) => void;
 class SelectorEvent extends Event {
-    private window: SelectorWindow;
+    private window: UISelector | null = null;
+    private optionFunc: (screen: Screen) => UISelectorEventOption;
     private selectAction: SelectAction;
+    private showAfter: boolean | undefined;
     private id: number = -1;
 
-    constructor(items: string[], tx: number, ty: number, tileWidth: number, tileHeight: number, selectAction: SelectAction) {
+    constructor(optionFunc: (screen: Screen) => UISelectorEventOption, selectAction: SelectAction) {
         super();
-        this.window = new SelectorWindow(items, tx, ty, tileWidth, tileHeight);
+        this.optionFunc = optionFunc;
         this.selectAction = selectAction;
     }
 
     public onStart(screen: Screen, scene: Scene, now: number): void {
+        const opt = this.optionFunc(screen);
+        this.window = new UISelector(opt);
         this.id = createWindow(this.window);
+        this.showAfter = opt.showAfter;
         setActiveWindow(this.id);
     }
 
     public onEnd(): void {
-        this.selectAction(this.window.getSelectIndex());
-        deleteWindow(this.id);
+        this.selectAction(this.window!.getSelectIndex(), this.id);
+        if (!this.showAfter) {
+            deleteWindow(this.id);
+        }
         this.id = -1;
     }
 
     public continueUpdate(screen: Screen): boolean {
-        return !this.window.isSelected();
+        return !this.window!.isSelected();
+    }
+}
+
+export function input(option: InputButtonOption, handler: (value: string) => void): InputEvent {
+    return new InputEvent(option, handler);
+}
+
+export type InputButtonOption = {
+    input: UIInputOption,
+    button: UIButtonOption,
+};
+
+class InputEvent extends Event {
+    private id: number = -1;
+    private idBtn: number = -1;
+
+    private option: InputButtonOption;
+    private handler: ((value: string) => void) | null;
+    private clicked: boolean = false;
+
+    constructor(option: InputButtonOption, handler: (value: string) => void) {
+        super();
+        this.option = option;
+        this.handler = handler;
+    }
+
+    public onStart(screen: Screen, scene: Scene, now: number): void {
+        const input = new UIInput(screen, this.option.input);
+        this.id = createWindow(input);
+        const btn = new UIButton(screen, this.option.button);
+        btn.addClickEvent(() => {
+            this.handler?.(input.getText());
+            AUDIO.se.ok.play();
+            this.clicked = true;
+        });
+        this.idBtn = createWindow(btn);
+        setActiveWindow(this.id);
+    }
+
+    public onEnd(): void {
+        deleteWindow(this.id);
+        deleteWindow(this.idBtn);
+        this.id = -1;
+        this.idBtn = -1;
+    }
+
+    public continueUpdate(screen: Screen): boolean {
+        return !this.clicked;
+    }
+}
+
+export function createJob(jobFunc: (screen: Screen) => Job): JobCreateEvent {
+    return new JobCreateEvent(jobFunc);
+}
+
+class JobCreateEvent extends Event {
+    private jobFunc: (screen: Screen) => Job;
+
+    constructor(jobFunc: (screen: Screen) => Job) {
+        super();
+        this.jobFunc = jobFunc;
+    }
+
+    public onStart(screen: Screen, scene: Scene, now: number): void {
+        scene.addJob(this.jobFunc(screen));
+    }
+
+    public onEnd(): void {
+    }
+
+    public continueUpdate(screen: Screen): boolean {
+        return false;
     }
 }
 
@@ -130,36 +252,28 @@ export class Job {
     }
 }
 
+export function job(checkDone: () => boolean, renderAction: ((screen: Screen) => void) | null, updateAction: (() => void) | null = null): Job {
+    return new (class extends Job {
+        public update(): void {
+            updateAction?.();
+        }
+        public render(screen: Screen): void {
+            renderAction?.(screen);
+        }
+        public hasDone(): boolean {
+            return checkDone();
+        }
+    })();
+}
+
 export class Scene {
     private events: Event[] = [];
     private jobs: Job[] = [];
 
     private index: number = 0;
 
-    public constructor() {}
-
-    public addMessage(lines: string[], afterShowing: boolean = false): this {
-        this.events.push(new MessageEvent(lines, afterShowing));
-        return this;
-    }
-
-    public addSelector(items: string[], tx: number, ty: number, tileWidth: number, tileHeight: number, selectAction: SelectAction): this {
-        this.events.push(new SelectorEvent(items, tx, ty, tileWidth, tileHeight, selectAction));
-        return this;
-    }
-
-    public addTime(tickLength: number, updatepAction: UpdateAction, startAction: StartAction | null = null, endAction: EndAction | null = null): this {
-        this.events.push(new TimeEvent(tickLength, updatepAction, startAction, endAction));
-        return this;
-    }
-
-    public addWait(check: (screen: Screen) => boolean): this {
-        this.events.push(new (class extends Event {
-            public continueUpdate(screen: Screen): boolean {
-                return check(screen);
-            }
-        })());
-        return this;
+    public constructor(events: Event[]) {
+        this.events = events;
     }
 
     public add(event: Event): this {
@@ -230,6 +344,10 @@ export class Scene {
 }
 
 let currentScene: Scene | null = null;
+
+export function createScene(events: Event[]): Scene {
+    return new Scene(events);
+}
 
 export function setScene(scene: Scene): void {
     currentScene = scene;

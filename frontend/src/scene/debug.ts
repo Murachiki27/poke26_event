@@ -1,5 +1,5 @@
 import { SCREEN_TILE_HEIGHT, SCREEN_TILE_WIDTH } from "../sys/device";
-import { Scene, setScene } from "./scene";
+import { createScene, Scene, selector, setScene } from "./scene";
 import { scene as openingScene } from './opening.ts';
 import { scene as battleScene } from './battle.ts';
 import { makeScene as makeInputScene } from './input.ts';
@@ -24,14 +24,8 @@ export function makeScene(screen: Screen): Scene {
                 break;
         }
     }
-    const scene: Scene = new Scene();
 
-    scene
-        .addSelector(["オープニングテスト", "バトルテスト", "にゅうりょく"],
-            x, y, w, h, sceneSelect
-        )
-        
-        ;
-
-    return scene;
+    return createScene([
+        selector({ items: ["オープニングテスト", "バトルテスト", "にゅうりょく"], tx: x, ty: y, tileWidth: w, tileHeight: h }, sceneSelect),
+    ]);
 }

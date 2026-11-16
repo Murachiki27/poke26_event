@@ -30,7 +30,7 @@ export function addButtonElement(screen: Screen, label: string, tx: number, ty: 
     buttonEl.style.height = `${screen.tileToPixelScale(th)}px`;
     buttonEl.style.border = buttonEl.style.padding = '0';
     buttonEl.style.fontSize = `${screen.tileToPixelScale(1)}px`;
-    buttonEl.style.opacity = '0.5';
+    buttonEl.style.opacity = '0';
 
     screen.canvas.parentElement!.appendChild(buttonEl);
     return buttonEl;
