@@ -44,6 +44,14 @@
             一覧更新
           </button>
         </div>
+
+        <div class="row">
+          <input
+            id="session-id"
+            type="text"
+            placeholder="セッションID"
+          />
+        </div>
       </section>
 
       <!-- Room -->
@@ -94,7 +102,15 @@
           <button id="connect-ws">
             WebSocket接続
           </button>
-
+          <button id="room-list-ws">
+            ROOM LIST
+          </button>
+          <button id="user-create">
+            USER CREATE
+          </button>
+          <button id="room-create-ws">
+            ROOM CREATE
+          </button>
           <button id="join-room-ws">
             JOIN
           </button>
@@ -105,6 +121,9 @@
 
           <button id="leave-room">
             LEAVE
+          </button>
+          <button id="close-ws">
+            CLOSE
           </button>
 
           <button id="debug-room">

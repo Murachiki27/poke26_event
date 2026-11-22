@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Poke26\App;
 
+use Poke26\App\Handler\CommandHandler;
 use Poke26\App\Handler\ConnectHandler;
 use Poke26\App\Handler\MessageHandler;
 use Poke26\App\Lib\Db\Db;
@@ -56,9 +57,9 @@ class App
     {
         echo "Client disconnected at {$connection->id}\n";
         // $usm = new UserStateMemoryCache($this->cache);
-        $csm = new ConnectionMemoryCache($this->cache);
-        $rsm = new RoomMemoryCache($this->cache);
-        ConnectHandler::end($connection, $this->db, $csm, $rsm);
+        // $csm = new ConnectionMemoryCache($this->cache);
+        // $rsm = new RoomMemoryCache($this->cache);
+        ConnectHandler::end($connection, $this->db, $this->cache);
     }
 
     private function onMessage(TcpConnection $connection, mixed $data): void
@@ -66,27 +67,29 @@ class App
         /** @var array */
         $message = json_decode($data, true);
 
-        // $usm = new UserStateMemoryCache($this->cache);
-        $csm = new ConnectionMemoryCache($this->cache);
-        $rsm = new RoomMemoryCache($this->cache);
-        $conn_state = $csm->fetch($connection->id);
-        $user_id = $message['user_id'] ?? null;
+        // // $usm = new UserStateMemoryCache($this->cache);
+        // $csm = new ConnectionMemoryCache($this->cache);
+        // $rsm = new RoomMemoryCache($this->cache);
+        // $conn_state = $csm->fetch($connection->id);
+        // $user_id = $message['user_id'] ?? null;
 
-        if ($user_id === null) {
-            echo $connection->id . ': user_id does not found.';
-            return;
-        }
-        // user_id が登録されているものと違うなら接続断
-        if ($conn_state !== null && $user_id !== $conn_state->user_id) {
-            $connection->close();
-            echo $connection->id . ': user_id changed. connection close. old:' . $conn_state->user_id . ', new:' . $user_id;
-            return;
-        }
+        // if ($user_id === null) {
+        //     echo $connection->id . ': user_id does not found.';
+        //     return;
+        // }
+        // // user_id が登録されているものと違うなら接続断
+        // if ($conn_state !== null && $user_id !== $conn_state->user_id) {
+        //     $connection->close();
+        //     echo $connection->id . ': user_id changed. connection close. old:' . $conn_state->user_id . ', new:' . $user_id;
+        //     return;
+        // }
 
         try {
-            MessageHandler::on($connection, $this->db, $csm, $rsm, $user_id, $message);
+            CommandHandler::on($connection, $this->cache, $this->db, $message);
+            // MessageHandler::on($connection, $this->db, $csm, $rsm, $user_id, $message);
         } catch (Throwable $t) {
-            echo $t->getMessage() . ', Cause:' .$t->getTraceAsString();
+            echo 'id: ' . $connection->id . ', type:' . $message['type'] . PHP_EOL;
+            echo $t->getMessage() . ', Cause:' .$t->getTraceAsString() . PHP_EOL;
         }
     }
 }

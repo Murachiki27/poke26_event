@@ -11,21 +11,36 @@ final class ConnectionState
         readonly TcpConnection $connection,
         readonly string $session_id,
         readonly int $user_id,
-        private ?int $room_id = null,
+        private ?string $room_code = null,
     ) {}
 
-    public function hasRoomId(): bool
+    public function isJoinedRoom(): bool
     {
-        return $this->room_id !== null;
+        return $this->room_code !== null;
     }
     
-    public function getRoomId(): ?int
+    public function getRoomCode(): ?string
     {
-        return $this->room_id;
+        return $this->room_code;
     }
 
-    public function setRoomId(int $room_id): void
+    public function setRoomCode(string $room_code): void
     {
-        $this->room_id = $room_id;
+        $this->room_code = $room_code;
+    }
+
+    public function clearRoomCode(): void
+    {
+        $this->room_code = null;
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->connection->id,
+            'session_id' => $this->session_id,
+            'user_id' => $this->user_id,
+            'room_code' => $this->room_code,
+        ];
     }
 }

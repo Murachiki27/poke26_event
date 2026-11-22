@@ -31,4 +31,18 @@ class MemoryCache
     {
         return array_keys($this->cache);
     }
+
+    public function values(?string $type): array
+    {
+        if ($type === null) {
+            return array_values($this->cache);
+        }
+        $results = [];
+        foreach ($this->cache as $key => $value) {
+            if (str_starts_with($key, $type)) {
+                $results[] = $value;
+            }
+        }
+        return $results;
+    }
 }

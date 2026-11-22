@@ -7,6 +7,7 @@ final class UserState
 {
     public function __construct(
         readonly int $user_id,
+        readonly string $name,
         readonly int $connection_id,
         private bool $ready = false,
         private ?object $next = null,

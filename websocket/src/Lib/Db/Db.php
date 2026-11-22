@@ -9,6 +9,7 @@ use PDOStatement;
 class Db
 {
     private PDO $pdo;
+    private int $last_row_count = 0;
 
     public function __construct(string $dsn, string $username, string $password)
     {
@@ -31,7 +32,13 @@ class Db
         self::bindValues($stmt, $bind);
         $stmt->execute();
         $lastId = $this->pdo->lastInsertId();
+        $this->last_row_count = $stmt->rowCount();
         return $lastId !== '0' ? $lastId : $stmt->rowCount();
+    }
+
+    public function affectedRows(): int
+    {
+        return $this->last_row_count;
     }
 
     private static function bindValues(PDOStatement $stmt, array $bind): void

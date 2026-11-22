@@ -6,6 +6,9 @@ namespace Poke26\App\ORM\Cache;
 use Poke26\App\ORM\State\ConnectionState;
 use Workerman\Connection\TcpConnection;
 
+/**
+ * @extends BaseCache<string, ConnectionState>
+ */
 final class ConnectionCache extends BaseCache
 {
     public function insert(TcpConnection $connection, string $session_id, int $user_id, ?int $room_id = null): void
@@ -35,5 +38,10 @@ final class ConnectionCache extends BaseCache
     private static function key(int $connection_id): string
     {
         return 'cs_' . $connection_id;
+    }
+
+    protected function type(): string
+    {
+        return 'cs_';
     }
 }

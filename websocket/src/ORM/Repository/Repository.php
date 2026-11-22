@@ -30,6 +30,21 @@ abstract class Repository
         return $this->db->writeQuery('INSERT INTO ' . $this->getTableName() . ' SET ' . $str, $bind);
     }
 
+    public function insertIgnore(array $data): int|string
+    {
+        $bind = [];
+        foreach ($data as $key => $value) {
+            $bind[':' . $key] = $value;
+        }
+        $str = implode(',', array_map(fn($key) => $key . ' = :' . $key, array_keys($data)));
+        return $this->db->writeQuery('INSERT IGNORE INTO ' . $this->getTableName() . ' SET ' . $str, $bind);
+    }
+
+    public function affectedRows(): int
+    {
+        return $this->db->affectedRows();
+    }
+
     protected function castEntity(array $row): object
     {
         $cls = $this->getEntityClass();

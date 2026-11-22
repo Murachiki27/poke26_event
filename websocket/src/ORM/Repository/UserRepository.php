@@ -25,4 +25,10 @@ final class UserRepository extends Repository
         $row = $this->db->readQuery('SELECT * FROM trx_users WHERE id = :id', [':id' => $id]);
         return isset($row[0]) ? $this->castEntity($row[0]) : null;
     }
+
+    public function fetchFirstByName(string $name): ?User
+    {
+        $row = $this->db->readQuery('SELECT * FROM trx_users WHERE name = :name', [':name' => $name]);
+        return isset($row[0]) ? $this->castEntity($row[0]) : null;
+    }
 }

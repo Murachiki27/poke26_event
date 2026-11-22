@@ -5,7 +5,9 @@ namespace Poke26\App\ORM\State;
 
 final class RoomState
 {
-        public function __construct(
+    public function __construct(
+        readonly string $name,
+        readonly string $code,
         private ?UserState $user_1 = null,
         private ?UserState $user_2 = null,
     ) {}
@@ -40,6 +42,11 @@ final class RoomState
         return $this->user_2 !== null;
     }
 
+    public function getUserCount(): int
+    {
+        return count($this->getConnectionIds());
+    }
+
     public function isAllReady(): bool
     {
         if ($this->user_1 !== null && $this->user_2 !== null) {
@@ -58,7 +65,7 @@ final class RoomState
         return null;
     }
 
-    public function deleteUser(int $user_id): ?int
+    public function deleteUser(int $user_id): int
     {
         if ($this->user_1 !== null && $this->user_1->user_id === $user_id) {
             $this->user_1 = null;
@@ -67,7 +74,7 @@ final class RoomState
             $this->user_2 = null;
             return 1;
         }
-        return null;
+        return -1;
     }
 
     /**
@@ -83,5 +90,15 @@ final class RoomState
             $list[] = $this->user_2->connection_id;
         }
         return $list;
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'code' => $this->code,
+            'user_1' => $this->user_1?->asArray(),
+            'user_2' => $this->user_2?->asArray(),
+        ];
     }
 }

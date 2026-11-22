@@ -1,3 +1,4 @@
+import { message } from "./scene/scene";
 import "./wstest.css";
 
 type User = {
@@ -40,6 +41,7 @@ const userNameInput = document.querySelector<HTMLInputElement>(
 const createUserButton = document.querySelector<HTMLButtonElement>("#create-user")!;
 const refreshUsersButton = document.querySelector<HTMLButtonElement>("#refresh-users")!;
 const userList = document.querySelector<HTMLSelectElement>("#user-list")!;
+const sessionIdInput = document.querySelector<HTMLInputElement>("#session-id")!;
 
 const roomNameInput = document.querySelector<HTMLInputElement>("#room-name")!;
 const createRoomButton = document.querySelector<HTMLButtonElement>("#create-room")!;
@@ -52,6 +54,16 @@ const connectButton = document.querySelector<HTMLButtonElement>(
   "#connect-ws"
 )!;
 
+const roomListButton = document.querySelector<HTMLButtonElement>(
+  "#room-list-ws"
+)!;
+
+const userCreateButton = document.querySelector<HTMLButtonElement>(
+  "#user-create"
+)!;
+const roomCreateButton = document.querySelector<HTMLButtonElement>(
+  "#room-create-ws"
+)!;
 const joinButton = document.querySelector<HTMLButtonElement>(
   "#join-room-ws"
 )!;
@@ -63,6 +75,7 @@ const readyButton = document.querySelector<HTMLButtonElement>(
 const leaveButton = document.querySelector<HTMLButtonElement>(
   "#leave-room"
 )!;
+const wsCloseButton = document.querySelector<HTMLButtonElement>("#close-ws")!;
 const debugButton = document.querySelector<HTMLButtonElement>(
   "#debug-room"
 )!;
@@ -431,6 +444,11 @@ function connectWebSocket() {
       // JSONではない場合はそのまま表示
     }
 
+    if (data.type === 'user_created') {
+      sessionIdInput.value = data.session_id;
+    }
+
+
     log({
       message: "WebSocket受信",
       data,
@@ -455,6 +473,19 @@ function connectWebSocket() {
   });
 }
 
+/**
+ * WebSocket切断
+ */
+function closeWebSocket() {
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    alert("WebSocketが接続されていません");
+    return;
+  }
+  socket.close();
+  log({
+    message: "接続",
+  });
+}
 
 /**
  * WebSocket送信
@@ -475,25 +506,44 @@ function sendWebSocket(data: unknown) {
   });
 }
 
-
 /**
- * join送信
+ * register送信
  */
-function joinRoomWs() {
+function registerWs() {
   if (!selectedUser) {
     alert("ユーザーを選択してください");
     return;
   }
 
-  if (!currentRoom) {
-    alert("Roomを作成または選択してください");
-    return;
-  }
+  sendWebSocket({
+    type: "register",
+    username: selectedUser.name,
+  });
+}
 
+function createRoomWs() {
+  sendWebSocket({
+    type: "create",
+    session_id: sessionIdInput.value,
+    name: roomNameInput.value,
+  });
+}
+
+function roomListWs() {
+  sendWebSocket({
+    type: "rooms",
+    session_id: sessionIdInput.value,
+  });
+}
+
+/**
+ * join送信
+ */
+function joinRoomWs() {
   sendWebSocket({
     type: "join",
-    user_id: Number(selectedUser.id),
-    room_id: Number(currentRoom.id),
+    session_id: sessionIdInput.value,
+    code: roomCodeInput.value,
   });
 }
 
@@ -523,19 +573,9 @@ function sendReady() {
  * leave送信
  */
 function leaveRoom() {
-  if (!selectedUser) {
-    alert("ユーザーを選択してください");
-    return;
-  }
-
-  if (!currentRoom) {
-    alert("Roomを選択してください");
-    return;
-  }
-
   sendWebSocket({
     type: "leave",
-    user_id: Number(selectedUser.id),
+    session_id: sessionIdInput.value,
   });
 }
 
@@ -547,7 +587,6 @@ function debugRoom() {
 
   sendWebSocket({
     type: "debug",
-    user_id: Number(selectedUser.id),
   });
 }
 
@@ -562,10 +601,14 @@ refreshRoomsButton.addEventListener("click", fetchRooms);
 joinRoomButton.addEventListener("click", joinRoom);
 
 connectButton.addEventListener("click", connectWebSocket);
+userCreateButton.addEventListener('click', registerWs);
+roomCreateButton.addEventListener('click', createRoomWs);
+roomListButton.addEventListener('click', roomListWs);
 joinButton.addEventListener("click", joinRoomWs);
 readyButton.addEventListener("click", sendReady);
 
 leaveButton.addEventListener("click", leaveRoom);
+wsCloseButton.addEventListener("click", closeWebSocket);
 debugButton.addEventListener("click", debugRoom);
 
 /**
@@ -575,7 +618,7 @@ async function initialize() {
   setStatus("初期化中...");
 
   await fetchUsers();
-  await fetchRooms();
+  // await fetchRooms();
 
   setStatus("準備完了");
 }
