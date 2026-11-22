@@ -12,6 +12,8 @@ use Poke26\App\ORM\MemoryCache\ConnectionMemoryCache;
 use Poke26\App\ORM\MemoryCache\RoomMemoryCache;
 use Poke26\App\ORM\MemoryCache\UserStateMemoryCache;
 use Throwable;
+use Workerman\Protocols\Websocket;
+use Workerman\Timer;
 use Workerman\Worker;
 use Workerman\Connection\TcpConnection;
 
@@ -20,6 +22,7 @@ class App
     private Worker $ws;
     private MemoryCache $cache;
     private Db $db;
+    private array $lastActiveTimes = [];
 
     public function __construct(Db $db)
     {
@@ -43,11 +46,31 @@ class App
     private function onWorkerStart(): void
     {
         echo "WebSocket server started\n";
+        // 30秒ごとに全クライアントへPingフレームを送信
+        Timer::add(30, function () {
+            foreach ($this->ws->connections as $connection) {
+                // Pingフレームのオペコード (0x9) を指定して送信
+                $connection->send(pack('H*', '8900'), true);
+            }
+        });
+        Timer::add(5, function () {
+            $time_now = time();
+            foreach ($this->ws->connections as $connection) {
+                $lastTime = $this->lastActiveTimes[$connection->id] ?? $time_now;
+                if ($time_now - $lastTime >= 300) {
+                    $connection->send(json_encode(['type' => 'idle_timeout'], JSON_UNESCAPED_UNICODE));
+                    $connection->close();
+                    // onClose が呼ばれるため unset されますが、念のためここでも削除可能
+                    unset($this->lastActiveTimes[$connection->id]);
+                }
+            }
+        });
     }
 
     private function onConnect(TcpConnection $connection): void
     {
         echo "Client connected at {$connection->id}\n";
+        $this->lastActiveTimes[$connection->id] = time();
         // $usm = new UserStateMemoryCache($this->cache);
         $csm = new ConnectionMemoryCache($this->cache);
         ConnectHandler::begin($connection, $csm);
@@ -56,6 +79,7 @@ class App
     private function onClose(TcpConnection $connection): void
     {
         echo "Client disconnected at {$connection->id}\n";
+        unset($this->lastActiveTimes[$connection->id]);
         // $usm = new UserStateMemoryCache($this->cache);
         // $csm = new ConnectionMemoryCache($this->cache);
         // $rsm = new RoomMemoryCache($this->cache);
@@ -85,6 +109,7 @@ class App
         // }
 
         try {
+            $this->lastActiveTimes[$connection->id] = time();
             CommandHandler::on($connection, $this->cache, $this->db, $message);
             // MessageHandler::on($connection, $this->db, $csm, $rsm, $user_id, $message);
         } catch (Throwable $t) {
