@@ -2,7 +2,7 @@ import  {type Screen} from "../graphics/screen.ts";
 import { getSpriteSheet } from "../data/sheet";
 import { effectContrast, effectLight } from "../graphics/effector";
 import { setMsgBoxVisible, setMsgOption } from "../sys/msgbox";
-import { createJob, createScene, input, job, Job, message, messageFunc, Scene, timer } from "./scene";
+import { createJob, createEventScene, input, job, Job, message, messageFunc, EventScene, timer, registerScene } from "./scene";
 import type { DefferedConst } from "../util/ref.ts";
 import { SCREEN_TILE_HEIGHT, SCREEN_TILE_WIDTH } from "../sys/device.ts";
 
@@ -19,7 +19,10 @@ setMsgOption({ tx: 0, ty: 18, tileWidth: SCREEN_TILE_WIDTH, tileHeight: 6 });
 
 let userName = '';
 
-export const scene = createScene([
+
+export const ID = "opening";
+
+registerScene(ID, (screen) => createEventScene([
     createJob(() => job(
         () => sheetOpVisible,
         (screen) => screen.blitCell(sheetOp.value, sheetX, 4, 7, 7, sheetU, sheetV)
@@ -158,5 +161,8 @@ export const scene = createScene([
     message(["レッド！"]),
     message(["いよいよ　これから", "きみの　ものがたりの　はじまりだ！"]),
     message(["ゆめと　ぼうけんと！", "ポケット　モンスターの　せかいへ！", "レッツゴー！"]),
-]);
+])
+);
+
+
 

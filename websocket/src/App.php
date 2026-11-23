@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Poke26\App;
 
+use Poke26\App\Exception\AppException;
 use Poke26\App\Handler\CommandHandler;
 use Poke26\App\Handler\ConnectHandler;
 use Poke26\App\Handler\MessageHandler;
@@ -11,6 +12,7 @@ use Poke26\App\Lib\MemoryCache;
 use Poke26\App\ORM\MemoryCache\ConnectionMemoryCache;
 use Poke26\App\ORM\MemoryCache\RoomMemoryCache;
 use Poke26\App\ORM\MemoryCache\UserStateMemoryCache;
+use Poke26\App\Sender\Sender;
 use Throwable;
 use Workerman\Protocols\Websocket;
 use Workerman\Timer;
@@ -115,6 +117,11 @@ class App
         } catch (Throwable $t) {
             echo 'id: ' . $connection->id . ', type:' . $message['type'] . PHP_EOL;
             echo $t->getMessage() . ', Cause:' .$t->getTraceAsString() . PHP_EOL;
+            if ($t instanceof AppException && $t->response) {
+                Sender::error($connection, $t->getCode(), $t->getMessage());
+            } else {
+                Sender::error($connection, 1, '不明のエラー');
+            }
         }
     }
 }

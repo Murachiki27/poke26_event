@@ -68,9 +68,9 @@ const joinButton = document.querySelector<HTMLButtonElement>(
   "#join-room-ws"
 )!;
 
-const readyButton = document.querySelector<HTMLButtonElement>(
-  "#ready"
-)!;
+// const readyButton = document.querySelector<HTMLButtonElement>(
+//   "#ready"
+// )!;
 
 const leaveButton = document.querySelector<HTMLButtonElement>(
   "#leave-room"
@@ -80,6 +80,18 @@ const debugButton = document.querySelector<HTMLButtonElement>(
   "#debug-room"
 )!;
 
+type El = {
+  elId: string;
+  handler: () => void;
+}
+interface Buttons {
+  [key: string]: El;
+}
+const buttons: Buttons = {
+  wsReady: { elId: "ws-ready", handler: sendReady },
+  wsReadyCancel: { elId: "ws-ready-cancel", handler: sendReadyCancel },
+};
+
 const statusElement = document.querySelector<HTMLDivElement>(
   "#status"
 )!;
@@ -87,7 +99,6 @@ const statusElement = document.querySelector<HTMLDivElement>(
 const logElement = document.querySelector<HTMLPreElement>(
   "#log"
 )!;
-
 
 /**
  * ログ表示
@@ -552,19 +563,21 @@ function joinRoomWs() {
  * ready送信
  */
 function sendReady() {
-  if (!selectedUser) {
-    alert("ユーザーを選択してください");
-    return;
-  }
-
-  if (!currentRoom) {
-    alert("Roomを選択してください");
-    return;
-  }
-
   sendWebSocket({
     type: "ready",
-    user_id: Number(selectedUser.id),
+    session_id: sessionIdInput.value,
+    state: true,
+  });
+}
+
+/**
+ * ready送信
+ */
+function sendReadyCancel() {
+  sendWebSocket({
+    type: "ready",
+    session_id: sessionIdInput.value,
+    state: false,
   });
 }
 
@@ -605,11 +618,16 @@ userCreateButton.addEventListener('click', registerWs);
 roomCreateButton.addEventListener('click', createRoomWs);
 roomListButton.addEventListener('click', roomListWs);
 joinButton.addEventListener("click", joinRoomWs);
-readyButton.addEventListener("click", sendReady);
+// readyButton.addEventListener("click", sendReady);
 
 leaveButton.addEventListener("click", leaveRoom);
 wsCloseButton.addEventListener("click", closeWebSocket);
 debugButton.addEventListener("click", debugRoom);
+
+for (const v of Object.values(buttons)) {
+  const el = document.querySelector<HTMLPreElement>("#" + v.elId)!;
+  el.addEventListener("click", v.handler);
+}
 
 /**
  * 初期化

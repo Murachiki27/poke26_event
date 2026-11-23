@@ -119,6 +119,11 @@ export class UIButton extends UIBase {
         drawTextUI(screen, this.buttonEl.textContent, this.labelX, this.labelY);
     }
 
+    setVisible(visible: boolean): void {
+        super.setVisible(visible);
+        this.buttonEl.hidden = !visible;
+    }
+
     onClose(): void {
         this.buttonEl.remove();
     }
@@ -167,6 +172,10 @@ export class UIInput extends UIBase {
         });
     }
 
+    public setText(value: string): void {
+        this.inputEl.value = value;
+    }
+
     public getText(): string {
         return this.inputEl.value;
     }
@@ -195,6 +204,11 @@ export class UIInput extends UIBase {
         }
     }
 
+    setVisible(visible: boolean): void {
+        super.setVisible(visible);
+        this.inputEl.hidden = !visible;
+    }
+
     onClose(): void {
         this.inputEl.remove();
     }
@@ -209,9 +223,15 @@ export class UISelector extends UIBase {
     private index: number = -1;
     private selected: boolean = false;
 
+    private handler: ((index: number) => void) | null = null;
+
     constructor(option: UISelectorOption) {
         super(option);
         this.items = option.items;
+    }
+
+    setClickEvent(handler: (index: number) => void): void {
+        this.handler = handler;
     }
 
     protected renderScreen(screen: Screen): void {
@@ -235,6 +255,8 @@ export class UISelector extends UIBase {
                     this.index = i;
                 } else {
                     this.selected = true;
+
+                    this.handler?.(this.index);
                 }
             }
         }
@@ -246,6 +268,10 @@ export class UISelector extends UIBase {
 
     getSelectIndex(): number {
         return this.index;
+    }
+
+    setItems(items: string[]): void {
+        this.items = items;
     }
 }
 

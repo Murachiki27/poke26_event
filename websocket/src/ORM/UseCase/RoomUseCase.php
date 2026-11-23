@@ -13,7 +13,11 @@ use Poke26\App\ORM\State\ConnectionState;
 use Poke26\App\ORM\State\RoomState;
 use Poke26\App\ORM\State\UserState;
 use Poke26\App\ORM\UseCase\Result\RoomLeaveResult;
+use Poke26\App\ORM\UseCase\Result\RoomReadyResult;
+use Poke26\App\ORM\UseCase\Result\RoomReadyStateResult;
+use Poke26\App\Sender\Sender;
 use Workerman\Connection\TcpConnection;
+use Workerman\Timer;
 
 final class RoomUseCase
 {
@@ -100,6 +104,45 @@ final class RoomUseCase
         $room_state->setUser2(new UserState($conn_state->user_id, $user->name, $connection->id));
         $conn_state->setRoomCode($code);
         return $room_state;
+    }
+
+    public function ready(TcpConnection $connection, string $session_id, bool $ready): ?RoomReadyResult
+    {
+        $conn_state = $this->conn_cache->fetch($connection->id);
+        if ($conn_state === null) {
+            throw new CacheNotFoundException('Connection not found');
+        }
+        if ($conn_state->session_id !== $session_id) {
+            throw new CacheNotFoundException('Invalid session');
+        }
+        if (!$conn_state->isJoinedRoom()) {
+            throw new CacheNotFoundException('User not joined');// 他ルームに参加していないのに退出できない
+        }
+        $room_code = $conn_state->getRoomCode();
+        $room_state = $this->room_cache->fetch($room_code);
+        if ($room_state === null) {
+            throw new CacheNotFoundException('Room not found:' . $room_code);// ルーム見つからなかった
+        }
+
+        $user_state = $room_state->findUser($conn_state->user_id);
+        if ($user_state === null) {
+            throw new CacheNotFoundException('User not found');// ユーザーが見つからなかった
+        }
+        $old_ready = $user_state->isReady();
+        if ($old_ready !== $ready) {
+            $user_state->setReady($ready);
+            $start = $room_state->isAllReady();
+            $cons = [];
+            foreach ($room_state->getConnectionIds() as $connection_id) {
+                $cs = $this->conn_cache->fetch($connection_id);
+                if ($cs !== null) {
+                    $cons[] = $cs->connection;
+                }
+            }
+
+            return new RoomReadyResult($start, $room_state, $cons);
+        }
+        return null;
     }
 
     /**

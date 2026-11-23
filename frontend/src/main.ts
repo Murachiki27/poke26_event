@@ -9,12 +9,12 @@ import {Screen, tileToPixel} from './graphics/screen.ts';
 // import {loadBinary} from "./io/sgb.ts";
 // import {createSpriteSheet} from "./io/asset.ts";
 // import {drawText, drawWindow} from "./graphics/ui.ts";
-import {clickScene, renderScene, setScene, updateScene} from "./scene/scene.ts";
+import {clickScene, initScenes, renderScene, setScene, updateScene} from "./scene/scene.ts";
 import { onMsgBoxStepAction, renderMsgBox, renderUI, updateMsgBox, updateUI } from './sys/msgbox.ts';
 import { calcEffect } from './graphics/effector.ts';
 // import { scene as openingScene } from './scene/opening.ts';
 import { SCREEN_PIXEL_HEIGHT, SCREEN_PIXEL_WIDTH } from './sys/device.ts';
-import { makeScene as makeDebugScene } from './scene/debug.ts';
+import { ID as DEBUG_ID } from './scene/debug.ts';
 
 // ---- 画面設定 (DMG: 160x144 / 4階調) -------------------------------
 
@@ -96,9 +96,9 @@ pushMsg();
 
 await loadSheets();
 
-const sceneDebug = makeDebugScene(screen);
+initScenes(screen);
 
-setScene(sceneDebug);
+setScene(DEBUG_ID);
 // let started = false;
 
 let tickCount = 0;
@@ -173,7 +173,7 @@ function pointerClick(this: HTMLCanvasElement, ev: PointerEvent): void {
     // const y = clickY * (canvas.height / rect.height);
     // console.log(ev.x, ev.y);
     onMsgBoxStepAction(x, y);
-    clickScene(screen);
+    clickScene(screen, x, y);
     // if (!started) {
     //     setScene(openingScene);
     //     started = true;

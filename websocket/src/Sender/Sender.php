@@ -8,6 +8,15 @@ use Workerman\Connection\TcpConnection;
 
 class Sender
 {
+    public static function error(TcpConnection $connection, int $code, string $message): void
+    {
+        $connection->send(json_encode([
+            'type' => 'error',
+            'code' => $code,
+            'message' => $message,
+        ]));
+    }
+
     public static function heartBeat(TcpConnection $connection): void
     {
         $connection->send(json_encode(['type' => 'heartbeat', 'status' => 'ok']));
@@ -82,6 +91,16 @@ class Sender
         $connection->send(json_encode([
             'type' => 'room_left',
         ]));
+    }
+
+    public static function roomReady(TcpConnection $connection, int $count): void
+    {
+        $connection->send(json_encode(['type' => 'room_ready', 'count' => $count]));
+    }
+
+    public static function roomReadyCancel(TcpConnection $connection): void
+    {
+        $connection->send(json_encode(['type' => 'room_ready_cancel']));
     }
 
     public static function battleStart(TcpConnection $connection): void

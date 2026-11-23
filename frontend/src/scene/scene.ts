@@ -20,7 +20,7 @@ export abstract class Event {
 
     public render(screen: Screen): void {}
 
-    public onStart(screen: Screen, scene: Scene, now: number): void {}
+    public onStart(screen: Screen, scene: EventScene, now: number): void {}
     public onUpdate(screen: Screen, now: number): void {}
     public abstract continueUpdate(screen: Screen): boolean;
     public onEnd(): void {}
@@ -63,7 +63,7 @@ class MessageEvent extends Event {
         this.afterShowing = afterShowing;
     }
 
-    onStart(screen: Screen, scene: Scene, now: number) {
+    onStart(screen: Screen, scene: EventScene, now: number) {
         resetMsgBoxState();
         setMsgBoxLines(...this.linesFunc(screen));
         setMsgBoxVisible(true);
@@ -102,7 +102,7 @@ class TimeEvent extends Event {
         this.endAction = endAction;
     }
 
-    public onStart(screen: Screen, scene: Scene, now: number) {
+    public onStart(screen: Screen, scene: EventScene, now: number) {
         this.ticks = 0;
         this.startAction?.();
     }
@@ -151,7 +151,7 @@ class SelectorEvent extends Event {
         this.selectAction = selectAction;
     }
 
-    public onStart(screen: Screen, scene: Scene, now: number): void {
+    public onStart(screen: Screen, scene: EventScene, now: number): void {
         const opt = this.optionFunc(screen);
         this.window = new UISelector(opt);
         this.id = createWindow(this.window);
@@ -195,7 +195,7 @@ class InputEvent extends Event {
         this.handler = handler;
     }
 
-    public onStart(screen: Screen, scene: Scene, now: number): void {
+    public onStart(screen: Screen, scene: EventScene, now: number): void {
         const input = new UIInput(screen, this.option.input);
         this.id = createWindow(input);
         const btn = new UIButton(screen, this.option.button);
@@ -232,7 +232,7 @@ class JobCreateEvent extends Event {
         this.jobFunc = jobFunc;
     }
 
-    public onStart(screen: Screen, scene: Scene, now: number): void {
+    public onStart(screen: Screen, scene: EventScene, now: number): void {
         scene.addJob(this.jobFunc(screen));
     }
 
@@ -267,13 +267,33 @@ export function job(checkDone: () => boolean, renderAction: ((screen: Screen) =>
 }
 
 export class Scene {
+    public update(screen: Screen, now: number): void {
+    }
+
+    public render(screen: Screen): void {
+    }
+
+    public click(screen: Screen, x: number, y: number): void {
+    }
+
+    public onStart(): void {
+    }
+
+    public onEnd(): void {
+    }
+}
+
+export class EventScene extends Scene {
     private events: Event[] = [];
+    private onEndAction: (() => void) | null;
     private jobs: Job[] = [];
 
     private index: number = 0;
 
-    public constructor(events: Event[]) {
+    public constructor(events: Event[], onEnd: (() => void) | null) {
+        super();
         this.events = events;
+        this.onEndAction = onEnd;
     }
 
     public add(event: Event): this {
@@ -300,7 +320,7 @@ export class Scene {
         return this;
     }
 
-    public update(screen: Screen, now: number): void {
+    public override update(screen: Screen, now: number): void {
         if (this.index >= this.events.length) {
             return;
         }
@@ -327,7 +347,7 @@ export class Scene {
         }
     }
 
-    public render(screen: Screen): void {
+    public override render(screen: Screen): void {
         if (this.index < this.events.length) {
             this.events[this.index].render(screen);
         }
@@ -336,21 +356,56 @@ export class Scene {
         }
     }
 
-    public click(screen: Screen): void {
+    public override click(screen: Screen): void {
         if (this.index < this.events.length) {
             this.events[this.index].onClick(screen);
         }
     }
+
+    public onEnd(): void {
+        this.onEndAction?.();
+    }
 }
 
+let currentSceneId: string = "";
 let currentScene: Scene | null = null;
+let screenRef: Screen;
+const factoryMap: Map<string, SceneFactory<Scene>> = new Map();
+const sceneMap: Map<string, Scene> = new Map();
 
-export function createScene(events: Event[]): Scene {
-    return new Scene(events);
+export function createEventScene(events: Event[], onEnd: (() => void) | null = null): EventScene {
+    return new EventScene(events, onEnd);
 }
 
-export function setScene(scene: Scene): void {
+export type SceneFactory<T extends Scene> = (screen: Screen) => T;
+
+export function registerScene<T extends Scene>(id: string, factory: SceneFactory<T>): void {
+    factoryMap.set(id, factory);
+}
+
+export function initScenes(screen: Screen): void {
+    screenRef = screen;
+    // factoryMap.forEach((v, k) => sceneMap.set(k, v(screen)));
+}
+
+
+export function setScene(id: string): void {
+    if (currentSceneId === id) {
+        return;
+    }
+    const factory = factoryMap.get(id);
+    if (factory === undefined) {
+        throw new Error('scene id:' + id + ' does not registered.');
+    }
+    const scene = factory(screenRef);
+    if (scene === undefined) {
+        throw new Error('scene id:' + id + ' is null.');
+    }
+    if (currentScene !== null) {
+        currentScene.onEnd();
+    }
     currentScene = scene;
+    currentScene.onStart();
 }
 
 export function updateScene(screen: Screen, now: number): void {
@@ -361,6 +416,6 @@ export function renderScene(screen: Screen): void {
     currentScene?.render(screen);
 }
 
-export function clickScene(screen: Screen): void {
-    currentScene?.click(screen);
+export function clickScene(screen: Screen, x: number, y: number): void {
+    currentScene?.click(screen, x, y);
 }

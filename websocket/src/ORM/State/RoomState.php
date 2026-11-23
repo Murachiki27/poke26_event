@@ -10,6 +10,9 @@ final class RoomState
         readonly string $code,
         private ?UserState $user_1 = null,
         private ?UserState $user_2 = null,
+
+        private int $ready_count = 0,
+        private ?int $ready_timer_id = null,
     ) {}
 
     public function setUser1(UserState $user): void
@@ -90,6 +93,44 @@ final class RoomState
             $list[] = $this->user_2->connection_id;
         }
         return $list;
+    }
+
+    public function incrementReadyCount(): void
+    {
+        $this->ready_count++;
+        if ($this->ready_count > 5) {
+            $this->ready_count = 5;
+        }
+    }
+
+    public function resetReadyCount(): void
+    {
+        $this->ready_count = 0;
+    }
+
+    public function getReadyCount(): ?int
+    {
+        return 5 - $this->ready_count;
+    }
+
+    public function isReadyStart(): bool
+    {
+        return $this->ready_count >= 5;
+    }
+
+    public function setReadyTimerId(int $ready_timer_id): void
+    {
+        $this->ready_timer_id = $ready_timer_id;
+    }
+
+    public function clearReadyTimerId(): void
+    {
+        $this->ready_timer_id = null;
+    }
+
+    public function getReadyTimerId(): ?int
+    {
+        return $this->ready_timer_id;
     }
 
     public function toArray(): array
