@@ -455,9 +455,9 @@ function connectWebSocket() {
       // JSONではない場合はそのまま表示
     }
 
-    if (data.type === 'user_created') {
-      sessionIdInput.value = data.session_id;
-    }
+    // if (data.type === 'user_created') {
+    //   sessionIdInput.value = data.session_id;
+    // }
 
 
     log({
