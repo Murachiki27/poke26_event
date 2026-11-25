@@ -8,6 +8,7 @@ use Poke26\App\Handler\CommandHandler;
 use Poke26\App\Handler\ConnectHandler;
 use Poke26\App\Handler\MessageHandler;
 use Poke26\App\Lib\Db\Db;
+use Poke26\App\Lib\Db\DbFactory;
 use Poke26\App\Lib\MemoryCache;
 use Poke26\App\ORM\MemoryCache\ConnectionMemoryCache;
 use Poke26\App\ORM\MemoryCache\RoomMemoryCache;
@@ -23,10 +24,9 @@ class App
 {
     private Worker $ws;
     private MemoryCache $cache;
-    private Db $db;
     private array $lastActiveTimes = [];
 
-    public function __construct(Db $db)
+    public function __construct()
     {
         $ws = new Worker(WEBSOCKET_NAME);
         $ws->count = 1;
@@ -37,7 +37,6 @@ class App
         $this->ws = $ws;
 
         $this->cache = new MemoryCache();
-        $this->db = $db;
     }
 
     public function run(): void
@@ -82,10 +81,12 @@ class App
     {
         echo "Client disconnected at {$connection->id}\n";
         unset($this->lastActiveTimes[$connection->id]);
+
+        $db = DbFactory::create();
         // $usm = new UserStateMemoryCache($this->cache);
         // $csm = new ConnectionMemoryCache($this->cache);
         // $rsm = new RoomMemoryCache($this->cache);
-        ConnectHandler::end($connection, $this->db, $this->cache);
+        ConnectHandler::end($connection, $db, $this->cache);
     }
 
     private function onMessage(TcpConnection $connection, mixed $data): void
@@ -111,8 +112,10 @@ class App
         // }
 
         try {
+            $db = DbFactory::create();
+
             $this->lastActiveTimes[$connection->id] = time();
-            CommandHandler::on($connection, $this->cache, $this->db, $message);
+            CommandHandler::on($connection, $this->cache, $db, $message);
             // MessageHandler::on($connection, $this->db, $csm, $rsm, $user_id, $message);
         } catch (Throwable $t) {
             echo 'id: ' . $connection->id . ', type:' . $message['type'] . PHP_EOL;
